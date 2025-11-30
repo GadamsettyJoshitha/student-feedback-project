@@ -72,6 +72,24 @@ function PieChart({ counts = [], labels = [], size = 160, colors = null }) {
   );
 }
 
+/* ---------- CAPTCHA HELPERS ---------- */
+// simple arithmetic captcha generator
+function generateCaptcha() {
+  // pick two small numbers and an operator
+  const a = Math.floor(Math.random() * 9) + 1; // 1..9
+  const b = Math.floor(Math.random() * 9) + 1;
+  const ops = ["+", "-", "×"];
+  const op = ops[Math.floor(Math.random() * ops.length)];
+
+  let question = `${a} ${op} ${b}`;
+  let answer;
+  if (op === "+") answer = a + b;
+  else if (op === "-") answer = a - b;
+  else answer = a * b;
+
+  return { question, answer };
+}
+
 /* ---------- MAIN APP ---------- */
 
 export default function App() {
@@ -99,9 +117,12 @@ export default function App() {
     "Biology",
     "Signals and Systems",
     "Thermodynamics",
+    "Structural Analysis",
+    "Concrete Technology",
+    "Surveying",
   ]);
 
-  // map course -> department (you can edit this mapping)
+  // map course -> department
   const [courseDepartments] = useState({
     "Introduction to Computer Science": "CSE",
     "Data Structures": "CSE",
@@ -112,6 +133,9 @@ export default function App() {
     "Biology": "BT",
     "Signals and Systems": "ECE",
     "Thermodynamics": "ME",
+    "Structural Analysis": "CE",
+    "Concrete Technology": "CE",
+    "Surveying": "CE",
   });
 
   // course -> default instructor mapping
@@ -125,11 +149,16 @@ export default function App() {
     "Biology": "Dr. Sharma",
     "Signals and Systems": "Dr. Iyer",
     "Thermodynamics": "Dr. Singh",
+    "Structural Analysis": "Dr. Gupta",
+    "Concrete Technology": "Dr. Verma",
+    "Surveying": "Dr. Reddy",
   });
 
   const [feedbacks, setFeedbacks] = useState([]);
 
   const [loginData, setLoginData] = useState({ username: "", password: "" });
+  const [loginCaptcha, setLoginCaptcha] = useState(generateCaptcha());
+  const [loginCaptchaInput, setLoginCaptchaInput] = useState("");
 
   const [registerData, setRegisterData] = useState({
     username: "",
@@ -141,6 +170,8 @@ export default function App() {
     instructorName: "",
     department: "CSE",
   });
+  const [registerCaptcha, setRegisterCaptcha] = useState(generateCaptcha());
+  const [registerCaptchaInput, setRegisterCaptchaInput] = useState("");
 
   const questionList = [
     { id: "teachingQuality", label: "Teaching Quality" },
@@ -161,6 +192,19 @@ export default function App() {
   // LOGIN
   const handleLogin = (e) => {
     e.preventDefault();
+
+    // captcha check
+    if (String(loginCaptchaInput).trim() === "") {
+      alert("Please answer the CAPTCHA.");
+      return;
+    }
+    if (Number(loginCaptchaInput) !== loginCaptcha.answer) {
+      alert("CAPTCHA incorrect. Please try again.");
+      setLoginCaptcha(generateCaptcha());
+      setLoginCaptchaInput("");
+      return;
+    }
+
     const foundUser = users.find((u) => u.username === loginData.username);
     if (!foundUser) {
       alert("❌ User does not exist!");
@@ -170,6 +214,7 @@ export default function App() {
       alert("❌ Wrong password!");
       return;
     }
+
     setUser(foundUser);
     setPage(foundUser.role);
     if (foundUser.role === "student") {
@@ -180,11 +225,26 @@ export default function App() {
       }));
     }
     setLoginData({ username: "", password: "" });
+    setLoginCaptcha(generateCaptcha());
+    setLoginCaptchaInput("");
   };
 
   // REGISTER
   const handleRegister = (e) => {
     e.preventDefault();
+
+    // captcha check
+    if (String(registerCaptchaInput).trim() === "") {
+      alert("Please answer the CAPTCHA.");
+      return;
+    }
+    if (Number(registerCaptchaInput) !== registerCaptcha.answer) {
+      alert("CAPTCHA incorrect. Please try again.");
+      setRegisterCaptcha(generateCaptcha());
+      setRegisterCaptchaInput("");
+      return;
+    }
+
     if (!registerData.username || !registerData.password || !registerData.fullName) {
       alert("Please fill username, password and full name.");
       return;
@@ -215,6 +275,8 @@ export default function App() {
       setForm((prev) => ({ ...prev, studentName: newUser.fullName || "", studentId: newUser.studentId || "" }));
     }
     setRegisterData({ username: "", password: "", confirmPassword: "", role: "student", fullName: "", studentId: "", instructorName: "", department: "CSE" });
+    setRegisterCaptcha(generateCaptcha());
+    setRegisterCaptchaInput("");
     alert("✅ Account created and logged in!");
   };
 
@@ -275,7 +337,8 @@ export default function App() {
   const coursesForStudent = (() => {
     if (!user || user.role !== "student") return courses; // fallback: show all (for safety)
     const dept = user.department;
-    return courses.filter((c) => courseDepartments[c] === dept);
+    const filtered = courses.filter((c) => courseDepartments[c] === dept);
+    return filtered;
   })();
 
   return (
@@ -293,6 +356,23 @@ export default function App() {
             <label>
               Password:
               <input type="password" value={loginData.password} onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} required />
+            </label>
+
+            {/* CAPTCHA */}
+            <label>
+              CAPTCHA: <span style={{ fontWeight: 700 }}>{loginCaptcha.question}</span>
+              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                <input
+                  type="number"
+                  value={loginCaptchaInput}
+                  onChange={(e) => setLoginCaptchaInput(e.target.value)}
+                  placeholder="Answer"
+                  required
+                />
+                <button type="button" onClick={() => { setLoginCaptcha(generateCaptcha()); setLoginCaptchaInput(""); }}>
+                  Refresh
+                </button>
+              </div>
             </label>
 
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -370,6 +450,23 @@ export default function App() {
               </label>
             )}
 
+            {/* CAPTCHA */}
+            <label>
+              CAPTCHA: <span style={{ fontWeight: 700 }}>{registerCaptcha.question}</span>
+              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                <input
+                  type="number"
+                  value={registerCaptchaInput}
+                  onChange={(e) => setRegisterCaptchaInput(e.target.value)}
+                  placeholder="Answer"
+                  required
+                />
+                <button type="button" onClick={() => { setRegisterCaptcha(generateCaptcha()); setRegisterCaptchaInput(""); }}>
+                  Refresh
+                </button>
+              </div>
+            </label>
+
             <div style={{ display: "flex", gap: 8 }}>
               <button type="submit">Create Account & Login</button>
               <button type="button" onClick={() => setPage("login")}>Cancel</button>
@@ -409,7 +506,11 @@ export default function App() {
                 required
               >
                 <option value="">-- Select course --</option>
-                {coursesForStudent.map((c, i) => (<option key={i} value={c}>{c}</option>))}
+                {coursesForStudent.length === 0 ? (
+                  <option value="" disabled>No courses available for your department</option>
+                ) : (
+                  coursesForStudent.map((c, i) => (<option key={i} value={c}>{c}</option>))
+                )}
               </select>
             </label>
 
